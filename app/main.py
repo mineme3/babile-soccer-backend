@@ -67,8 +67,8 @@ def create_app() -> FastAPI:
         description="Football live-score platform. Admin/staff insert all data; "
         "the mobile app consumes it in real time. Registration is optional.",
         version="0.1.0",
-        docs_url="/docs" if settings.debug else None,
-        redoc_url="/redoc" if settings.debug else None,
+        docs_url="/docs",
+        redoc_url="/redoc",
         lifespan=lifespan,
     )
 
@@ -91,6 +91,11 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
 
     register_error_handlers(app)
+
+    @app.get("/", include_in_schema=False)
+    async def root():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/health", status_code=302)
 
     app.include_router(health.router)
     app.include_router(admin.router)
