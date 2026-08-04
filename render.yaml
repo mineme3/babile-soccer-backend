@@ -37,8 +37,6 @@ services:
         value: "production"
       - key: CORS_ORIGINS
         value: "*"
-      - key: FRONTEND_URL
-        value: "https://babilesport.vercel.app"
       # ── ImageKit ──────────────────────────────────────────
       - key: IMAGEKIT_URL_ENDPOINT
         sync: false

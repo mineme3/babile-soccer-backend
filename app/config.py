@@ -53,6 +53,13 @@ class Settings(BaseSettings):
                 "postgresql://", "postgresql+asyncpg://", 1
             )
 
+        # asyncpg doesn't understand libpq query params (sslmode, channel_binding, etc.)
+        # Strip them and set SSL via connect_args instead
+        parsed = urlparse(self.database_url)
+        if parsed.query:
+            clean = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            self.database_url = clean
+
         # Upstash: build redis_url from REST credentials if not explicitly set
         if self.upstash_redis_rest_url and not self.redis_url.startswith("rediss://"):
             parsed = urlparse(self.upstash_redis_rest_url)
