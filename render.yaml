@@ -14,7 +14,7 @@ services:
         sync: false
       # ── Auth ──────────────────────────────────────────────
       - key: SECRET_KEY
-        generateValue: true
+        sync: false
       - key: ALGORITHM
         value: "HS256"
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -25,7 +25,7 @@ services:
       - key: ADMIN_EMAIL
         value: "admin@babile.com"
       - key: ADMIN_PASSWORD
-        sync: false
+        value: "Admin@123"
       - key: ADMIN_DISPLAY_NAME
         value: "Admin Operator"
       # ── App ───────────────────────────────────────────────
