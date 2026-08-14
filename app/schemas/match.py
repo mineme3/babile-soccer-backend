@@ -78,6 +78,29 @@ class MatchEventResponse(MatchEventBase):
     created_at: datetime
 
 
+class PlayerBasicResponse(BaseModel):
+    """Minimal player info for event responses."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    jersey_number: int | None = None
+    position: str | None = None
+    photo_url: str | None = None
+
+
+class MatchEventEnrichedResponse(MatchEventBase):
+    """Structured event response with player enrichment — no raw commentary strings."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    match_id: uuid.UUID
+    sequence: int
+    created_at: datetime
+    player: PlayerBasicResponse | None = None
+    assist_player: PlayerBasicResponse | None = None
+
+
 class LineupEntryBase(BaseModel):
     match_id: uuid.UUID
     team_id: uuid.UUID

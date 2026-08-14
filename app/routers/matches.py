@@ -20,6 +20,7 @@ from app.schemas.match import (
     MatchCreate,
     MatchDetailResponse,
     MatchEventCreate,
+    MatchEventEnrichedResponse,
     MatchEventResponse,
     MatchHydrationUpdate,
     MatchMinuteUpdate,
@@ -27,6 +28,7 @@ from app.schemas.match import (
     MatchStartRequest,
     MatchStatisticsUpdate,
     MatchUpdate,
+    PlayerBasicResponse,
     ResultOnlyCreate,
 )
 from app.services.auth import require_role
@@ -150,9 +152,9 @@ async def get_match(match_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return data
 
 
-@router.get("/{match_id}/events", response_model=list[MatchEventResponse])
+@router.get("/{match_id}/events", response_model=list[MatchEventEnrichedResponse])
 async def get_match_events(match_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Events for a match — the path the app's Summary tab calls."""
+    """Events for a match — returns structured JSON with player enrichment."""
     match_repo = MatchRepository(db)
     match = await match_repo.get(match_id)
     if not match:

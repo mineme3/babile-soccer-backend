@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.competition import Season, Stage
 from app.models.match import LineupEntry, Match, MatchEvent, MatchStatus
@@ -118,11 +118,17 @@ class MatchEventRepository(BaseRepository[MatchEvent]):
     async def list_by_match(self, match_id: uuid.UUID) -> list[MatchEvent]:
         stmt = (
             select(MatchEvent)
+            .options(
+                selectinload(MatchEvent.player),
+                selectinload(MatchEvent.assist_player),
+                selectinload(MatchEvent.player_off),
+                selectinload(MatchEvent.player_on),
+            )
             .where(MatchEvent.match_id == match_id)
             .order_by(MatchEvent.minute, MatchEvent.sequence)
         )
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.unique().scalars().all())
 
 
 class LineupEntryRepository(BaseRepository[LineupEntry]):
