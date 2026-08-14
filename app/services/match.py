@@ -1,18 +1,17 @@
 """Match lifecycle management.
 
 Staff and admin drive every match from the admin website or the offline-first
-operator console. Every state change is broadcast over SSE immediately so the
-mobile app updates in real time.
+operator console. The mobile app polls REST endpoints for updates.
 
 The match minute is *client-authoritative*: the operator device runs a ticker
-and syncs the current minute to the server (`sync_minute`), which stores it and
-fans it out over SSE. This keeps the console fully usable offline.
+and syncs the current minute to the server (`sync_minute`), which stores it.
+This keeps the console fully usable offline.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +28,6 @@ from app.models.match import (
 )
 from app.repositories.match import LineupEntryRepository, MatchEventRepository, MatchRepository
 from app.services.audit import record_audit
-from app.services.sse import sse_service
 
 SCORE_EVENT_TYPES = (
     EventType.GOAL,
@@ -157,7 +155,6 @@ class MatchService:
                 action="publish",
                 actor_id=actor_id,
             )
-        await self._broadcast_standings(match)
         return match
 
     async def set_postponed(self, match_id: uuid.UUID, actor_id: uuid.UUID | None = None) -> Match:
@@ -191,7 +188,6 @@ class MatchService:
             period=MatchPeriod.FULL_TIME,
             actor_id=actor_id,
         )
-        await self._broadcast_standings(match)
         return match
 
     # ── Minute / hydration (client-authoritative ticker) ────
@@ -208,7 +204,6 @@ class MatchService:
         if period is not None:
             match.current_period = period
         await self.session.flush()
-        await self._publish_match(match)
         return match
 
     async def set_hydration_break(
@@ -228,7 +223,6 @@ class MatchService:
             action="hydration_break" if active else "hydration_resume",
             actor_id=actor_id,
         )
-        await self._publish_match(match)
         return match
 
     # ── Results ─────────────────────────────────────────────
@@ -273,8 +267,6 @@ class MatchService:
             after={"home_score": home_score, "away_score": away_score},
         )
         await self.session.refresh(match)
-        await self._publish_match(match)
-        await self._broadcast_standings(match)
         return match
 
     # ── Lineups ─────────────────────────────────────────────
@@ -304,16 +296,6 @@ class MatchService:
             )
             entries.append(entry)
         await self.session.flush()
-        await sse_service.publish(
-            sse_service.CHANNEL_MATCH_EVENTS,
-            {
-                "type": "lineup",
-                "match_id": str(match_id),
-                "team_id": str(team_id),
-                "player_ids": [str(p) for p in player_ids],
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        )
         return entries
 
     # ── Events ──────────────────────────────────────────────
@@ -369,7 +351,6 @@ class MatchService:
 
         await self.session.flush()
         await self.session.refresh(event)
-        await self._publish_match(match)
         return event
 
     async def sync_events(
@@ -423,16 +404,6 @@ class MatchService:
             self.session.add(row)
             rows.append(row)
         await self.session.flush()
-        await sse_service.publish(
-            sse_service.CHANNEL_MATCH_EVENTS,
-            {
-                "type": "statistics",
-                "match_id": str(match_id),
-                "team_id": str(team_id),
-                "statistics": {k: str(v) for k, v in (stats or {}).items()},
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        )
         return rows
 
     async def get_statistics(self, match_id: uuid.UUID) -> dict[uuid.UUID, dict[str, str]]:
@@ -459,7 +430,6 @@ class MatchService:
             action="dispute",
             actor_id=actor_id,
         )
-        await self._publish_match(match)
         return match
 
     async def resolve_dispute(
@@ -483,8 +453,6 @@ class MatchService:
             actor_id=actor_id,
             after={"home_score": home_score, "away_score": away_score},
         )
-        await self._publish_match(match)
-        await self._broadcast_standings(match)
         return match
 
     # ── Helpers ─────────────────────────────────────────────
@@ -569,7 +537,6 @@ class MatchService:
             after={"status": status.value, "period": period.value},
         )
         await self.session.refresh(match)
-        await self._publish_match(match)
         return match
 
     async def _ensure_record_status(self, match: Match, status: RecordStatus, actor_id: uuid.UUID | None) -> None:
@@ -599,49 +566,3 @@ class MatchService:
         stmt = select(func.count()).select_from(EventModel).where(EventModel.match_id == match_id)
         result = await self.session.execute(stmt)
         return (result.scalar() or 0) + 1
-
-    async def _publish_match(self, match: Match) -> None:
-        await sse_service.publish(
-            sse_service.CHANNEL_MATCH_EVENTS,
-            {
-                "type": "match_update",
-                "match_id": str(match.id),
-                "status": match.status.value,
-                "current_period": match.current_period.value,
-                "current_minute": match.current_minute,
-                "home_team_id": str(match.home_team_id),
-                "away_team_id": str(match.away_team_id),
-                "home_score": match.home_score,
-                "away_score": match.away_score,
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        )
-
-    async def _broadcast_standings(self, match: Match) -> None:
-        from app.services.standings import StandingsService
-
-        svc = StandingsService(self.session)
-        rows = await svc.compute_for_stage(match.stage_id, match.group_id)
-        await sse_service.publish(
-            sse_service.CHANNEL_STANDINGS,
-            {
-                "stage_id": str(match.stage_id),
-                "group_id": str(match.group_id) if match.group_id else None,
-                "standings": [
-                    {
-                        "team_id": str(r.team_id),
-                        "team_name": r.team_name,
-                        "played": r.played,
-                        "won": r.won,
-                        "drawn": r.drawn,
-                        "lost": r.lost,
-                        "goals_for": r.goals_for,
-                        "goals_against": r.goals_against,
-                        "goal_difference": r.goal_difference,
-                        "points": r.points,
-                        "rank": r.rank,
-                    }
-                    for r in rows
-                ],
-            },
-        )

@@ -12,7 +12,6 @@ from app.models.user import User, UserRole
 from app.repositories.news import ArticleRepository
 from app.schemas.news import ArticleCreate, ArticleResponse, ArticleUpdate
 from app.services.auth import require_role
-from app.services.sse import sse_service
 
 router = APIRouter(prefix="/api/v1/news", tags=["News"])
 
@@ -65,7 +64,6 @@ async def create_article(
         slug=slug,
         author_id=current_user.id,
     )
-    await sse_service.broadcast_change("news", "created", str(article.id))
     return article
 
 
@@ -92,12 +90,6 @@ async def update_article(
     article = await repo.update(article_id, **updates)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    await sse_service.broadcast_change("news", "updated", str(article.id))
-    if article.status == ArticleStatus.PUBLISHED:
-        await sse_service.publish(
-            sse_service.CHANNEL_NEWS,
-            {"id": str(article.id), "title": article.title, "category": article.category.value},
-        )
     return article
 
 
@@ -111,4 +103,3 @@ async def delete_article(
     deleted = await repo.delete(article_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Article not found")
-    await sse_service.broadcast_change("news", "deleted", str(article_id))

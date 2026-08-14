@@ -10,11 +10,6 @@ class Settings(BaseSettings):
     # Database (asyncpg driver)
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/babile_sport"
 
-    # Redis (used for real-time SSE pub/sub)
-    redis_url: str = "redis://localhost:6379/0"
-    upstash_redis_rest_url: str = ""
-    upstash_redis_rest_token: str = ""
-
     # Auth
     secret_key: str = "dev-secret-change-in-production"
     algorithm: str = "HS256"
@@ -59,13 +54,6 @@ class Settings(BaseSettings):
         if parsed.query:
             clean = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
             self.database_url = clean
-
-        # Upstash: build redis_url from REST credentials if not explicitly set
-        if self.upstash_redis_rest_url and not self.redis_url.startswith("rediss://"):
-            parsed = urlparse(self.upstash_redis_rest_url)
-            host = parsed.hostname or ""
-            token = self.upstash_redis_rest_token
-            self.redis_url = f"rediss://:{token}@{host}:6379"
 
 
 settings = Settings()

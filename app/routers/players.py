@@ -12,7 +12,6 @@ from app.repositories.player import PlayerRepository
 from app.repositories.team import TeamRepository
 from app.schemas.player import PlayerCreate, PlayerResponse, PlayerUpdate
 from app.services.auth import require_role
-from app.services.sse import sse_service
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +55,6 @@ async def create_player(
                 ),
             )
     player = await repo.create(**body.model_dump())
-    await sse_service.broadcast_change("player", "created", str(player.id))
     return player
 
 
@@ -87,7 +85,6 @@ async def update_player(
                 ),
             )
     player = await repo.update(player_id, **update_data)
-    await sse_service.broadcast_change("player", "updated", str(player.id))
     return player
 
 
@@ -104,4 +101,3 @@ async def delete_player(
     deleted = await repo.delete(player_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Player not found")
-    await sse_service.broadcast_change("player", "deleted", str(player_id))

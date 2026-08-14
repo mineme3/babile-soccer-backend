@@ -30,7 +30,6 @@ from app.schemas.match import (
 )
 from app.services.auth import require_role
 from app.services.match import MatchService
-from app.services.sse import sse_service
 from app.services.standings import StandingsService
 
 router = APIRouter(prefix="/api/v1/matches", tags=["Matches"])
@@ -174,7 +173,6 @@ async def create_match(
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-    await sse_service.broadcast_change("match", "created", str(match.id))
     return _enrich_match(match)
 
 
@@ -191,7 +189,6 @@ async def delete_match(
         return _match_error_response(exc)
     if not deleted:
         return error_response(ErrorCode.MATCH_NOT_FOUND, "The requested match could not be found.", "Verify the match ID is correct.", 404)
-    await sse_service.broadcast_change("match", "deleted", str(match_id))
 
 
 @router.patch("/{match_id}", response_model=MatchResponse)
@@ -205,7 +202,6 @@ async def update_match(
     match = await repo.update(match_id, **body.model_dump(exclude_none=True))
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
-    await sse_service.broadcast_change("match", "updated", str(match.id))
     return _enrich_match(match)
 
 

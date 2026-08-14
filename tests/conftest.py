@@ -7,7 +7,6 @@ from httpx import ASGITransport, AsyncClient
 from app.config import settings
 
 settings.database_url = "postgresql+asyncpg://postgres:postgres@localhost:5432/babile_sport_test"
-settings.redis_url = "redis://localhost:6379/1"
 settings.secret_key = "test-secret"
 settings.debug = False
 
@@ -30,18 +29,6 @@ async def setup_database():
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
     await app_engine.dispose()
-
-
-@pytest.fixture(autouse=True)
-async def _close_redis():
-    """Ensure the SSE redis client doesn't leak pending tasks after tests."""
-    yield
-    from app.services.sse import sse_service
-
-    redis = sse_service._redis
-    if redis is not None:
-        sse_service._redis = None
-        await redis.aclose()
 
 
 @pytest.fixture

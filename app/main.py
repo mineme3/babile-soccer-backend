@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import logging
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -23,7 +23,6 @@ from app.routers import (
     news,
     players,
     search,
-    sse,
     teams,
     upload,
 )
@@ -107,7 +106,6 @@ def create_app() -> FastAPI:
     app.include_router(news.router)
     app.include_router(search.router)
     app.include_router(moderation.router)
-    app.include_router(sse.router)
     app.include_router(upload.router)
 
     structlog.configure(

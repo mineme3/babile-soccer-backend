@@ -30,7 +30,6 @@ from app.schemas.competition import (
     StageResponse,
 )
 from app.services.auth import require_role
-from app.services.sse import sse_service
 from app.services.standings import StandingsService
 
 router = APIRouter(prefix="/api/v1/competitions", tags=["Competitions"])
@@ -74,7 +73,6 @@ async def create_competition(
 ):
     repo = CompetitionRepository(db)
     comp = await repo.create(**body.model_dump())
-    await sse_service.broadcast_change("competition", "created", str(comp.id))
     return comp
 
 
@@ -89,7 +87,6 @@ async def update_competition(
     comp = await repo.update(competition_id, **body.model_dump(exclude_none=True))
     if not comp:
         raise HTTPException(status_code=404, detail="Competition not found")
-    await sse_service.broadcast_change("competition", "updated", str(comp.id))
     return comp
 
 
@@ -147,7 +144,6 @@ async def create_season(
         raise HTTPException(status_code=400, detail="competition_id in body must match the URL")
     repo = SeasonRepository(db)
     season = await repo.create(**body.model_dump())
-    await sse_service.broadcast_change("season", "created", str(season.id))
     return season
 
 
@@ -164,7 +160,6 @@ async def create_stage(
         raise HTTPException(status_code=404, detail="Season not found in this competition")
     repo = StageRepository(db)
     stage = await repo.create(**body.model_dump())
-    await sse_service.broadcast_change("stage", "created", str(stage.id))
     return stage
 
 
@@ -185,7 +180,6 @@ async def create_group(
         raise HTTPException(status_code=404, detail="Stage does not belong to this competition")
     repo = GroupRepository(db)
     group = await repo.create(**body.model_dump())
-    await sse_service.broadcast_change("group", "created", str(group.id))
     return group
 
 
@@ -199,7 +193,6 @@ async def delete_competition(
     deleted = await repo.delete(competition_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Competition not found")
-    await sse_service.broadcast_change("competition", "deleted", str(competition_id))
 
 
 @router.delete("/{competition_id}/seasons/{season_id}", status_code=204)
@@ -216,7 +209,6 @@ async def delete_season(
     deleted = await repo.delete(season_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Season not found")
-    await sse_service.broadcast_change("season", "deleted", str(season_id))
 
 
 @router.delete("/{competition_id}/stages/{stage_id}", status_code=204)
@@ -237,7 +229,6 @@ async def delete_stage(
     deleted = await stage_repo.delete(stage_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Stage not found")
-    await sse_service.broadcast_change("stage", "deleted", str(stage_id))
 
 
 @router.patch("/{competition_id}/groups/{group_id}", response_model=GroupResponse)
@@ -252,7 +243,6 @@ async def update_group(
     group = await repo.update(group_id, **body.model_dump(exclude_none=True))
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-    await sse_service.broadcast_change("group", "updated", str(group.id))
     return group
 
 
@@ -278,4 +268,3 @@ async def delete_group(
     deleted = await group_repo.delete(group_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Group not found")
-    await sse_service.broadcast_change("group", "deleted", str(group_id))

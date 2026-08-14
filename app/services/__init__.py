@@ -11,14 +11,12 @@ from app.services.auth import (
 )
 from app.services.match import MatchService
 from app.services.search import SearchService
-from app.services.sse import sse_service
 from app.services.standings import StandingsService
 
 __all__ = [
     "hash_password", "verify_password", "create_access_token", "create_refresh_token",
     "decode_token", "get_current_user", "require_role", "require_admin", "hash_token",
     "StandingsService",
-    "sse_service",
     "MatchService",
     "SearchService",
 ]

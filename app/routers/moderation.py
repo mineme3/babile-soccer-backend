@@ -13,7 +13,6 @@ from app.repositories.governance import ModerationRepository
 from app.schemas.governance import ModerationItemCreate, ModerationItemResponse, ModerationItemReview
 
 from app.services.auth import require_role
-from app.services.sse import sse_service
 
 router = APIRouter(prefix="/api/v1/moderation", tags=["Moderation"])
 
@@ -34,7 +33,6 @@ async def submit_report(
         status="open",
         submitter_id=user.id,
     )
-    await sse_service.broadcast_change("moderation", "submitted", str(item.id))
     return item
 
 
@@ -66,5 +64,4 @@ async def review_item(
     item.reviewer_id = user.id
     item.reviewed_at = datetime.now(UTC)
     await db.flush()
-    await sse_service.broadcast_change("moderation", "reviewed", str(item.id))
     return item

@@ -16,7 +16,6 @@ from app.schemas.player import PlayerResponse
 from app.schemas.team import TeamCreate, TeamResponse, TeamUpdate
 from app.services.auth import require_role
 from app.services.h2h import HeadToHeadService
-from app.services.sse import sse_service
 
 router = APIRouter(prefix="/api/v1/teams", tags=["Teams"])
 
@@ -44,7 +43,6 @@ async def create_team(
 ):
     repo = TeamRepository(db)
     team = await repo.create(**body.model_dump())
-    await sse_service.broadcast_change("team", "created", str(team.id))
     return team
 
 
@@ -59,7 +57,6 @@ async def update_team(
     team = await repo.update(team_id, **body.model_dump(exclude_none=True))
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
-    await sse_service.broadcast_change("team", "updated", str(team.id))
     return team
 
 
@@ -76,7 +73,6 @@ async def delete_team(
     deleted = await repo.delete(team_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Team not found")
-    await sse_service.broadcast_change("team", "deleted", str(team_id))
 
 
 @router.get("/{team_id}/h2h/{opponent_id}", response_model=H2HResponse)
