@@ -23,6 +23,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY app/ app/
+COPY alembic/ alembic/
+COPY alembic.ini .
 
 EXPOSE 8000
 

@@ -32,14 +32,14 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.models.base import Base
     from app.models.user import User, UserRole
     from app.repositories.user import UserRepository
     from app.services.auth import hash_password
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Run Alembic migrations on startup to keep schema in sync
+    import subprocess, sys
+    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=False)
 
     # Auto-seed admin on first startup
     async with AsyncSession(engine) as db:
