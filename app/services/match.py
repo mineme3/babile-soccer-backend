@@ -534,6 +534,21 @@ class MatchService:
         actor_id: uuid.UUID | None = None,
     ) -> Match:
         match = await self._require_match(match_id)
+        
+        # Prevent restarting a completed match
+        finished_statuses = {
+            MatchStatus.FULL_TIME,
+            MatchStatus.CANCELLED,
+            MatchStatus.ABANDONED,
+            MatchStatus.WALKOVER,
+            MatchStatus.POSTPONED,
+        }
+        if status == MatchStatus.LIVE and match.status in finished_statuses:
+            raise ValueError(
+                f"Cannot start a match that is already {match.status.value}. "
+                "Create a new match instead."
+            )
+        
         before_status = match.status.value
         match.status = status
         match.current_period = period
