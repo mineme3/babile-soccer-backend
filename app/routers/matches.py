@@ -234,6 +234,7 @@ async def add_match_event(
             player_id=body.player_id,
             assist_player_id=body.assist_player_id,
             player_off_id=body.player_off_id,
+            player_on_id=body.player_on_id,
             detail=body.detail,
             actor_id=user.id,
         )

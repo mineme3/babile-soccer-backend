@@ -50,6 +50,7 @@ class MatchEventBase(BaseModel):
     player_id: uuid.UUID | None = None
     assist_player_id: uuid.UUID | None = None
     player_off_id: uuid.UUID | None = None
+    player_on_id: uuid.UUID | None = None
     detail: str | None = None
 
     @field_validator("minute")

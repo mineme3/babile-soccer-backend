@@ -309,6 +309,7 @@ class MatchService:
         player_id: uuid.UUID | None = None,
         assist_player_id: uuid.UUID | None = None,
         player_off_id: uuid.UUID | None = None,
+        player_on_id: uuid.UUID | None = None,
         detail: str | None = None,
         period: EventPeriod | None = None,
         actor_id: uuid.UUID | None = None,
@@ -344,6 +345,7 @@ class MatchService:
             player_id=player_id,
             assist_player_id=assist_player_id,
             player_off_id=player_off_id,
+            player_on_id=player_on_id,
             detail=detail,
             sequence=sequence,
             period=period or self._period_for(match),
@@ -373,6 +375,9 @@ class MatchService:
                 ),
                 player_off_id=(
                     uuid.UUID(ev["player_off_id"]) if ev.get("player_off_id") else None
+                ),
+                player_on_id=(
+                    uuid.UUID(ev["player_on_id"]) if ev.get("player_on_id") else None
                 ),
                 detail=ev.get("detail"),
                 actor_id=actor_id,

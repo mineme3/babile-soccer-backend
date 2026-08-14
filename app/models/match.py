@@ -127,6 +127,7 @@ class MatchEvent(Base, TimestampMixin):
     player_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("players.id"))
     assist_player_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("players.id"))
     player_off_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("players.id"))
+    player_on_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("players.id"))
     detail: Mapped[str | None] = mapped_column(Text)
     sequence: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -135,6 +136,7 @@ class MatchEvent(Base, TimestampMixin):
     player: Mapped[Player | None] = relationship(foreign_keys=[player_id])
     assist_player: Mapped[Player | None] = relationship(foreign_keys=[assist_player_id])
     player_off: Mapped[Player | None] = relationship(foreign_keys=[player_off_id])
+    player_on: Mapped[Player | None] = relationship(foreign_keys=[player_on_id])
 
 
 class LineupEntry(Base, TimestampMixin):
