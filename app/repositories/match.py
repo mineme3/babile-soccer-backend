@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.competition import Competition, Season, Stage
+from app.models.competition import Season, Stage
 from app.models.match import LineupEntry, Match, MatchEvent, MatchStatus
 from app.repositories.base import BaseRepository
 
@@ -37,6 +37,12 @@ class MatchRepository(BaseRepository[Match]):
             )
             .where(Match.id == id)
         )
+        result = await self.session.execute(stmt)
+        return result.unique().scalar_one_or_none()
+
+    async def get_with_enrich(self, id: uuid.UUID) -> Match | None:
+        """Get a match with team + competition relations needed for _enrich_match."""
+        stmt = select(Match).options(*_match_relations()).where(Match.id == id)
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
 

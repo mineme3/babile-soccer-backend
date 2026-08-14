@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.errors import classify_match_error, error_response, ErrorCode
+from app.errors import ErrorCode, classify_match_error, error_response
 from app.models.user import User, UserRole
 from app.repositories.match import (
     LineupEntryRepository,
@@ -24,6 +24,7 @@ from app.schemas.match import (
     MatchHydrationUpdate,
     MatchMinuteUpdate,
     MatchResponse,
+    MatchStartRequest,
     MatchStatisticsUpdate,
     MatchUpdate,
     ResultOnlyCreate,
@@ -173,6 +174,8 @@ async def create_match(
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
+    repo = MatchRepository(db)
+    match = await repo.get_with_enrich(match.id)
     return _enrich_match(match)
 
 
@@ -202,6 +205,7 @@ async def update_match(
     match = await repo.update(match_id, **body.model_dump(exclude_none=True))
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
+    match = await repo.get_with_enrich(match_id)
     return _enrich_match(match)
 
 
@@ -278,18 +282,20 @@ async def submit_lineup(
     try:
         return await svc.submit_lineup(match_id, team_id, player_ids, is_starting_xi)
     except ValueError as exc:
-        raise HTTPException(status_code=_match_error_status(exc), detail=str(exc))
+        return _match_error_response(exc)
 
 
 @router.post("/{match_id}/start", response_model=MatchResponse)
 async def start_match(
     match_id: uuid.UUID,
+    body: MatchStartRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_role(UserRole.ADMIN)),
 ):
     svc = MatchService(db)
     try:
-        match = await svc.start_match(match_id, actor_id=user.id)
+        announcement = body.announcement if body else None
+        match = await svc.start_match(match_id, actor_id=user.id, announcement=announcement)
     except ValueError as exc:
         return _match_error_response(exc)
     return _enrich_match(match)

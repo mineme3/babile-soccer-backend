@@ -96,13 +96,22 @@ class MatchService:
 
     # ── Lifecycle ───────────────────────────────────────────
 
-    async def start_match(self, match_id: uuid.UUID, actor_id: uuid.UUID | None = None) -> Match:
+    async def start_match(self, match_id: uuid.UUID, actor_id: uuid.UUID | None = None, announcement: str | None = None) -> Match:
         match = await self._set_status(
             match_id,
             status=MatchStatus.LIVE,
             period=MatchPeriod.FIRST_HALF,
             minute=1,
         )
+        if announcement:
+            await record_audit(
+                self.session,
+                entity_type="match",
+                entity_id=match_id,
+                action="announcement",
+                actor_id=actor_id,
+                after={"announcement": announcement},
+            )
         await self._ensure_record_status(match, RecordStatus.SUBMITTED, actor_id)
         return match
 
@@ -266,7 +275,6 @@ class MatchService:
             actor_id=actor_id,
             after={"home_score": home_score, "away_score": away_score},
         )
-        await self.session.refresh(match)
         return match
 
     # ── Lineups ─────────────────────────────────────────────
@@ -541,7 +549,6 @@ class MatchService:
             before={"status": before_status},
             after={"status": status.value, "period": period.value},
         )
-        await self.session.refresh(match)
         return match
 
     async def _ensure_record_status(self, match: Match, status: RecordStatus, actor_id: uuid.UUID | None) -> None:
@@ -558,7 +565,7 @@ class MatchService:
             )
 
     async def _require_match(self, match_id: uuid.UUID) -> Match:
-        match = await self.match_repo.get(match_id)
+        match = await self.match_repo.get_with_enrich(match_id)
         if not match:
             raise ValueError(f"Match {match_id} not found")
         return match

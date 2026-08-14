@@ -41,6 +41,10 @@ class MatchHydrationUpdate(BaseModel):
     active: bool
 
 
+class MatchStartRequest(BaseModel):
+    announcement: str | None = None
+
+
 class MatchEventBase(BaseModel):
     event_type: EventType
     minute: int
