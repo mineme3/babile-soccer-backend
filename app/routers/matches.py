@@ -82,6 +82,18 @@ def _enrich_match(match) -> dict:
     }
 
 
+async def _re_enrich(db: AsyncSession, match_id: uuid.UUID) -> dict:
+    """Re-fetch a match with all relations after a mutation, then enrich.
+
+    After service methods call ``session.flush()``, scalar attributes like
+    ``updated_at`` are expired.  This helper re-fetches the match with
+    eagerly-loaded relationships so ``_enrich_match`` can safely read everything.
+    """
+    repo = MatchRepository(db)
+    match = await repo.get_with_enrich(match_id)
+    return _enrich_match(match)
+
+
 @router.get("", response_model=list[MatchResponse])
 async def list_matches(
     match_date: date | None = Query(None, alias="date"),
@@ -295,10 +307,10 @@ async def start_match(
     svc = MatchService(db)
     try:
         announcement = body.announcement if body else None
-        match = await svc.start_match(match_id, actor_id=user.id, announcement=announcement)
+        await svc.start_match(match_id, actor_id=user.id, announcement=announcement)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/half-time", response_model=MatchResponse)
@@ -312,7 +324,7 @@ async def half_time(
         match = await svc.set_half_time(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/second-half", response_model=MatchResponse)
@@ -326,7 +338,7 @@ async def second_half(
         match = await svc.set_second_half(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/extra-time", response_model=MatchResponse)
@@ -340,7 +352,7 @@ async def extra_time(
         match = await svc.set_extra_time(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/penalties", response_model=MatchResponse)
@@ -354,7 +366,7 @@ async def penalties(
         match = await svc.set_penalties(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/postponed", response_model=MatchResponse)
@@ -368,7 +380,7 @@ async def postponed(
         match = await svc.set_postponed(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/cancelled", response_model=MatchResponse)
@@ -382,7 +394,7 @@ async def cancelled(
         match = await svc.set_cancelled(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/abandoned", response_model=MatchResponse)
@@ -396,7 +408,7 @@ async def abandoned(
         match = await svc.set_abandoned(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/walkover", response_model=MatchResponse)
@@ -413,7 +425,7 @@ async def walkover(
         await db.flush()
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/minute", response_model=MatchResponse)
@@ -433,7 +445,7 @@ async def sync_minute(
         )
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/hydration-break", response_model=MatchResponse)
@@ -448,7 +460,7 @@ async def hydration_break(
         match = await svc.set_hydration_break(match_id, body.active, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/full-time", response_model=MatchResponse)
@@ -462,7 +474,7 @@ async def full_time(
         match = await svc.set_full_time(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/result-only", response_model=MatchResponse)
@@ -483,7 +495,7 @@ async def submit_result_only(
         )
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/statistics")
@@ -525,7 +537,7 @@ async def dispute_match(
         match = await svc.dispute_match(match_id, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
 
 
 @router.post("/{match_id}/resolve-dispute", response_model=MatchResponse)
@@ -545,4 +557,4 @@ async def resolve_dispute(
         )
     except ValueError as exc:
         return _match_error_response(exc)
-    return _enrich_match(match)
+    return await _re_enrich(db, match_id)
