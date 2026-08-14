@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,11 +77,14 @@ async def update_article(
 ):
     repo = ArticleRepository(db)
     updates = body.model_dump(exclude_none=True)
-    if "status" in updates and isinstance(updates["status"], str):
-        try:
-            updates["status"] = ArticleStatus(updates["status"])
-        except ValueError:
-            raise HTTPException(status_code=422, detail=f"Invalid status: {updates['status']}")
+    if "status" in updates:
+        if isinstance(updates["status"], str):
+            try:
+                updates["status"] = ArticleStatus(updates["status"])
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Invalid status: {updates['status']}")
+        if updates["status"] == ArticleStatus.PUBLISHED:
+            updates["published_at"] = datetime.now(UTC)
     if "category" in updates and isinstance(updates["category"], str):
         from app.models.news import NewsCategory
         try:
