@@ -33,6 +33,16 @@ async def get_player(player_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return player
 
 
+@router.get("/{player_id}/stats")
+async def get_player_stats(player_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    repo = PlayerRepository(db)
+    player = await repo.get(player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    stats = await repo.get_stats(player_id)
+    return stats
+
+
 @router.post("", response_model=PlayerResponse, status_code=201)
 async def create_player(
     body: PlayerCreate,

@@ -171,7 +171,24 @@ async def get_match_lineups(match_id: uuid.UUID, db: AsyncSession = Depends(get_
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
     repo = LineupEntryRepository(db)
-    return await repo.list_by_match(match_id)
+    entries = await repo.list_by_match(match_id)
+    # Build response dicts that include player name/photo for the client
+    return [
+        {
+            "id": l.id,
+            "match_id": l.match_id,
+            "team_id": l.team_id,
+            "player_id": l.player_id,
+            "is_starting_xi": l.is_starting_xi,
+            "jersey_number": l.jersey_number,
+            "position": l.position,
+            "formation_place": l.formation_place,
+            "created_at": l.created_at,
+            "player_name": l.player.name if l.player else None,
+            "player_photo": l.player.photo_url if l.player else None,
+        }
+        for l in entries
+    ]
 
 
 @router.post("", response_model=MatchResponse, status_code=201)

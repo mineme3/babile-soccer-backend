@@ -120,6 +120,8 @@ class LineupEntryResponse(LineupEntryBase):
 
     id: uuid.UUID
     created_at: datetime
+    player_name: str | None = None
+    player_photo: str | None = None
 
 
 class MatchResponse(MatchBase):

@@ -138,8 +138,9 @@ class LineupEntryRepository(BaseRepository[LineupEntry]):
     async def list_by_match(self, match_id: uuid.UUID) -> list[LineupEntry]:
         stmt = (
             select(LineupEntry)
+            .options(selectinload(LineupEntry.player))
             .where(LineupEntry.match_id == match_id)
             .order_by(LineupEntry.formation_place)
         )
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.unique().scalars().all())
