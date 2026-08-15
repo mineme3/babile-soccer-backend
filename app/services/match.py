@@ -234,6 +234,26 @@ class MatchService:
         )
         return match
 
+    async def add_time(
+        self,
+        match_id: uuid.UUID,
+        minutes: int,
+        actor_id: uuid.UUID | None = None,
+    ) -> Match:
+        """Add stoppage time to the current half."""
+        match = await self._require_match(match_id)
+        match.added_time = max(0, min(int(minutes), 10))
+        await self.session.flush()
+        await record_audit(
+            self.session,
+            entity_type="match",
+            entity_id=match_id,
+            action="add_time",
+            actor_id=actor_id,
+            detail=f"Added {match.added_time} minutes",
+        )
+        return match
+
     # ── Results ─────────────────────────────────────────────
 
     async def submit_result_only(

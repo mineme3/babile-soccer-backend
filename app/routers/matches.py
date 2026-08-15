@@ -17,6 +17,7 @@ from app.repositories.match import (
 from app.schemas.match import (
     DisputeResolve,
     LineupEntryResponse,
+    MatchAddTimeRequest,
     MatchCreate,
     MatchDetailResponse,
     MatchEventCreate,
@@ -477,6 +478,21 @@ async def hydration_break(
     svc = MatchService(db)
     try:
         match = await svc.set_hydration_break(match_id, body.active, actor_id=user.id)
+    except ValueError as exc:
+        return _match_error_response(exc)
+    return await _re_enrich(db, match_id)
+
+
+@router.post("/{match_id}/add-time", response_model=MatchResponse)
+async def add_time(
+    match_id: uuid.UUID,
+    body: MatchAddTimeRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    svc = MatchService(db)
+    try:
+        match = await svc.add_time(match_id, body.minutes, actor_id=user.id)
     except ValueError as exc:
         return _match_error_response(exc)
     return await _re_enrich(db, match_id)
